@@ -1,30 +1,38 @@
 import requests
 import time
 import os
+import openai
+
+openai.api_type = "azure"
+openai.api_version = "2023-03-15-preview"
 
 with open("keys.txt") as f:
-    # converting our text file to a list of lines
-    lines = f.read().split('\n')
-    # openai api key
-    api_key = lines[0]
-    api_base = lines[1]
+	# converting our text file to a list of lines
+	lines = f.read().split('\n')
+	# openai api key
+	openai.api_key = lines[0]
+	openai.api_base = lines[1]
 # close the file
 f.close()
 
-# response = openai.ChatCompletion.create(
-# 			engine="GPT-4",
-# 			messages=[
-# 			{"role": "system", "content": "you write prompts for openai Dall-E"},
-# 			{"role": "user", "content": "Describe the perfect image, be brief"}
-# 			]
-# 		)
-# print(response.choices[0].message.content)
+response = openai.ChatCompletion.create(
+	engine="GPT-4",
+	messages=[
+	{"role": "system", "content": "You make prompts for Dall-E"},
+	{"role": "user", "content": "Describe the most beautiful image, please be brief"}
+	]
+)
 
-api_version = '2022-08-03-preview'
-url = "{}dalle/text-to-image?api-version={}".format(api_base, api_version)
+img_prompt = response.choices[0].message.content
+print(img_prompt)
+
+api_base = openai.api_base
+api_key = openai.api_key
+
+url = "{}dalle/text-to-image?api-version=2022-08-03-preview".format(api_base)
 headers= { "api-key": api_key, "Content-Type": "application/json" }
 body = {
-    "caption": "A dog in a hat",
+    "caption": img_prompt,
     "resolution": "1024x1024"
 }
 submission = requests.post(url, headers=headers, json=body)
@@ -37,13 +45,6 @@ while (status != "Succeeded"):
     status = response.json()['status']
 image_url = response.json()['result']['contentUrl']
 print(image_url)
-
-# chat completion
-# response = openai.ChatCompletion.create(engine="GPT-4", messages=[{"role": "system", "content": "You create prompts for the Dall-E system."},
-#     {"role": "user", "content": "Describe the perfect image, please be brief"},
-# ])
-# img_prompt = response.choices[0].message.content
-# print(img_prompt)
 
 
 
