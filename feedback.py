@@ -2,6 +2,26 @@ import requests
 import time
 import os
 import openai
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFont
+from io import BytesIO
+
+def wrap_text_pixel_width(text, font, max_width):
+	words = text.split()
+	wrapped_lines = []
+	current_line = []
+
+	for word in words:
+		current_line.append(word)
+		line_width, _ = font.getsize(' '.join(current_line))
+		if line_width > max_width:
+			current_line.pop()
+			wrapped_lines.append(' '.join(current_line))
+			current_line = [word]
+
+	wrapped_lines.append(' '.join(current_line))
+	return '\n'.join(wrapped_lines)
 
 openai.api_type = "azure"
 openai.api_version = "2023-03-15-preview"
@@ -10,6 +30,8 @@ prev_chat_prompt = ""
 new_chat_prompt = "Describe the most beautiful image, please be brief"
 
 loop_count = 5
+font_size = 32
+font = ImageFont.truetype("arial.ttf", font_size)
 
 with open("keys.txt") as f:
 	# converting our text file to a list of lines
@@ -51,9 +73,23 @@ for x in range(loop_count):
 	    response = requests.get(operation_location, headers=headers)
 	    status = response.json()['status']
 	image_url = response.json()['result']['contentUrl']
-	prev_chat_prompt = new_chat_prompt
-	new_chat_prompt = image_url
 	print(image_url)
+	data = requests.get(image_url).content
+	img = Image.open(BytesIO(data))
+	
+	wrapped_text = wrap_text_pixel_width(img_prompt, font, img.width)
+	
+	# create a new image with extra space at the bottom for the caption
+	new_image = Image.new('RGB', (img.width, img.height + 200), (255, 255, 255))
+	new_image.paste(img, (0,0))
+
+	draw = ImageDraw.Draw(new_image)
+	draw.text((10, img.height + 10), wrapped_text, font=font, fill=(0,0,0))
+
+	new_image.save('img{}.jpg'.format(x))
+
+	prev_chat_prompt = new_chat_prompt
+	new_chat_prompt = image_url			
 
 
 
